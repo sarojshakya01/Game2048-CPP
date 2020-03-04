@@ -34,7 +34,7 @@ rm *.stderr *.stdcout
 
 # For test case 1
 
-for casenum in `seq 1 1 3`; do
+for casenum in `seq 1 1 9`; do
 	./${cmd} "input=input${hwnumber}${casenum}.txt;output=output${hwnumber}${casenum}.txt" 1>${casenum}.stdcout 2>${casenum}.stderr
 # compare 1.out with 1.ans, output the difference to 1.diff
 	diff -iEBwu ans${hwnumber}${casenum}.txt output${hwnumber}${casenum}.txt > ${casenum}.diff

@@ -1,83 +1,19 @@
 #include<iostream>
 #include<fstream>
 #include <bits/stdc++.h> 
+#include "ArgumentManager.h"
 
 using namespace std;
 
-// funtion to get the file name from given command line string
-string getFileName(int argc, char const *argv[], int mode){
-  bool readValue = false, inputRead = false;
-  string inputfull = "", outputfull = "", infilename = "", outfilename = "";
-
-  int i = 0;
-  
-  if (argc == 2){
-    while(argv[1][i] != '\0') {
-      
-      if (argv[1][i] == ';') {
-        inputRead = true;
-        i++;
-      }
-      if (!inputRead) {
-        inputfull += argv[1][i];
-      } else {
-        outputfull = outputfull + argv[1][i];
-      }
-      
-      i++;
-    }
-
-  } else if (argc == 3) {
-    
-    inputfull = argv[1];
-    outputfull = argv[2];
-  }
-
-  readValue = false;
-  i = 0;
-
-  while(inputfull[i] != '\0') {
-    
-    if (readValue) {
-      infilename = infilename + inputfull[i];
-    }
-    if (inputfull[i] == '=') {
-      readValue = true;
-    }
-    i++;
-  }
-
-  readValue = false;
-  i = 0;
-  
-  while(outputfull[i] != '\0') {
-    
-    if (readValue) {
-      outfilename = outfilename + outputfull[i];
-    }
-    if (outputfull[i] == '=') {
-      readValue = true;
-    }
-    i++;
-  }
-
-  if (mode == 1) {
-    return infilename;
-  } else if (mode == 2) {
-    return outfilename;
-  } else {
-    return "";
-  }
-}
-
 //class definition
 class Game2048 {
-  int size, max;
+  int size, max, movecnt;
   bool merged;
   ifstream infile;
   stack<int> **grid = NULL;
   stack<int> **backGrid = NULL;
   stack<int> *elem =  NULL;
+  string path;
  
   public:
   int dir;
@@ -95,7 +31,8 @@ class Game2048 {
   void displayGrid();
   void displayHead(const char*);
   void readFile(string);
-  bool gridMerged();
+  bool gridSolved();
+  bool ischangedGrid();
 };
 
 //constreuctor
@@ -114,6 +51,7 @@ Game2048 :: Game2048(int s, string file):size(s), max(2048){
   elem = new stack<int>[this -> size*this -> size];
   this -> exit = false;
   this -> outfile.open(file);
+  this -> movecnt = 0;
 }
 
 // destructor
@@ -246,7 +184,14 @@ void Game2048 :: move() {
       for (int j = 0; j < this -> size; j++) {
         if (!grid[j][i].top()) {
           for (int k = j + 1; k < this -> size; k++) {
-            if (grid[k][i].top() == this -> max || grid[k-1][i].top() == this -> max) continue;
+            bool brk = false;
+            for (int l = k; l >= 0; l--) {
+              if (grid[k][i].top() == this -> max) {
+                brk = true;
+                break;
+              }
+            }
+            if (brk) break;
             if (grid[k][i].top() && grid[k][i].top() != this -> max) {
               grid[j][i].push(grid[k][i].top());
               grid[k][i].push(0);
@@ -263,7 +208,14 @@ void Game2048 :: move() {
       for (int j = size - 1; j >= 0; j--) {
         if (!grid[i][j].top()) {
           for (int k = j - 1; k >= 0; k--) {
-            if (grid[i][k].top() == this -> max || grid[i][k+1].top() == this -> max) continue;
+            bool brk = false;
+            for (int l = k; l < j; l++) {
+              if (grid[i][l].top() == this -> max) {
+                brk = true;
+                break;
+              }
+            }
+            if (brk) break;
             if (grid[i][k].top() && grid[i][k].top() != this -> max) {
               grid[i][j].push(grid[i][k].top());
               grid[i][k].push(0);
@@ -280,7 +232,14 @@ void Game2048 :: move() {
       for (int j = size - 1; j >= 0; j--) {
         if (!grid[j][i].top()) {
           for (int k = j - 1; k >= 0; k--) {
-            if (grid[k][i].top() == this -> max || grid[k+1][i].top() == this -> max) continue;
+            bool brk = false;
+            for (int l = k; l < j; l++) {
+              if (grid[l][i].top() == this -> max) {
+                brk = true;
+                break;
+              }
+            }
+            if (brk) break;
             if (grid[k][i].top() && grid[k][i].top() != this -> max) {
               grid[j][i].push(grid[k][i].top());
               grid[k][i].push(0);
@@ -297,7 +256,14 @@ void Game2048 :: move() {
       for (int j = 0; j < this -> size; j++) {
         if (!grid[i][j].top()) {
           for (int k = j + 1; k < this -> size; k++) {
-            if (grid[i][k].top() == this -> max || grid[i][k-1].top() == this -> max) continue;
+            bool brk = false;
+            for (int l = k; l >= 0; l--) {
+              if (grid[i][k].top() == this -> max) {
+                brk = true;
+                break;
+              }
+            }
+            if (brk) break;
             if (grid[i][k].top()) {
               grid[i][j].push(grid[i][k].top());
               grid[i][k].push(0);
@@ -366,7 +332,7 @@ void Game2048 :: mergeGrid() {
 }
 
 // funtion to know either grid is solved completely or not
-bool Game2048 :: gridMerged() {
+bool Game2048 :: gridSolved() {
   int unmergedNum = 0;
   bool gridMerged = true;
   for (int i = 0; i < this -> size; i++) {
@@ -383,13 +349,31 @@ bool Game2048 :: gridMerged() {
   return gridMerged;
 }
 
+bool Game2048 :: ischangedGrid() {
+  for (int i = 0; i < this -> size; i++) {
+    for (int j = 0; j < this -> size; j++) {
+      if (grid[i][j].top() != backGrid[i][j].top())
+        return true;
+    }
+  }
+  return false;
+}
+
 // funtion to play the game
 void Game2048 :: playGame() {
+  
+  int tempdir;
+
   this -> backupGrid();
   this -> move();
   this -> mergeGrid();
   this -> move();
   
+  
+  if (this -> ischangedGrid()) {
+    this -> movecnt++;
+  }
+
   // if not merged, undo the move and try fron another direction
   if (!this -> merged) {
     this -> undo();
@@ -398,8 +382,24 @@ void Game2048 :: playGame() {
       this -> dir = 1;
     }
   } else {
+    tempdir = dir;
+    if (dir == 4) { // gives priority to right if both case mergeable
+      this -> move();
+      this -> mergeGrid();
+      this -> move();
+      if (this -> merged) {
+        this -> undo();
+        dir = 2;
+        this -> move();
+        this -> mergeGrid();
+        this -> move();
+        
+      }
+    }
+    
     //if merged, generate output to the file and display the grid
     this -> outfile << this -> dir;
+    
     if (this -> dir == 1){
       cout << endl << "MOVE: UP";
     } else if (this -> dir == 2){
@@ -408,33 +408,39 @@ void Game2048 :: playGame() {
       cout << endl << "MOVE: DOWN";
     } else if (this -> dir == 4){
       cout << endl << "MOVE: LEFT";
-    } 
+    }
+    
+    if (tempdir) dir = 1;
+    
     this -> displayGrid();
+    
     this -> dir = 1; // gives priority to UP direction for each move
   }
 
   // if there is no possible merge remaining, exit
-  if (this -> dir == 4 && ! this -> merged) {
+  if (this -> movecnt >= 4 && ! this -> ischangedGrid()) {
     this -> exit = true;
   }
 }
 
-int main(int argc, char const *argv[]) {
+int main(int argc, char *argv[]) {
 
   if (argc < 2) {
     cout << "Invalid parameters" << endl;
     exit(EXIT_FAILURE); // terminate with error
   }
 
-  string infilename = getFileName(argc,argv,1);
-  string outfilename = getFileName(argc,argv,2);
+  ArgumentManager am(argc, argv);
+    
+  string infilename = am.get("input");// get the input filename
+  string outfilename = am.get("output"); // get the output filename
 
-  // srand(time(NULL));
+  int dim;
 
   // to find the size of GRID
   ifstream infile;
   infile.open(infilename);
-  int dim;
+  
   while(infile >> dim) {
     break;
   }
@@ -450,8 +456,9 @@ int main(int argc, char const *argv[]) {
   cout<<endl;
   
   int cnt = 0;
-  game -> dir = 4;
   
+  game -> dir = 4;
+
   // play the game until game is not exit
   while(!game -> exit) {
     
@@ -471,7 +478,7 @@ int main(int argc, char const *argv[]) {
   game -> displayGrid();
   
   // if given grid is not merged completely, output 'Impossible'
-  if (!game -> gridMerged()) {
+  if (!game -> gridSolved()) {
     game -> outfile.close();
     game -> outfile.open(outfilename, ofstream::out | ofstream::trunc);
     game -> outfile << "Impossible";
